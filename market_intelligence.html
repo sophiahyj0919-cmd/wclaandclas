@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultraformer MPT 3국 시술가 비교 (태국·중국·브라질)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #333; }
+
+    header {
+      background: linear-gradient(135deg, #1b1b3a, #2d3177);
+      color: white; padding: 28px 40px 0;
+    }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p { margin-top: 4px; opacity: 0.7; font-size: 0.85rem; }
+
+    /* ---- TABS ---- */
+    .tab-nav {
+      display: flex; gap: 4px; margin-top: 20px;
+    }
+    .tab-btn {
+      padding: 10px 24px; border: none; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7); border-radius: 8px 8px 0 0;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.25); }
+    .tab-btn.active { background: #f0f4f8; color: #2d3177; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ---- LAYOUT ---- */
+    .section { padding: 24px 40px; }
+    .section:first-child { padding-top: 24px; }
+
+    .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 18px 24px;
+      flex: 1; min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid var(--accent, #2d3177);
+    }
+    .stat-card .label { font-size: 0.73rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--accent, #2d3177); margin-top: 2px; }
+    .stat-card .sub { font-size: 0.78rem; color: #bbb; margin-top: 1px; }
+
+    .charts-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    }
+    .chart-card {
+      background: white; border-radius: 12px; padding: 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    .chart-card canvas { max-height: 300px; }
+
+    .table-card {
+      background: white; border-radius: 12px; padding: 22px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      margin-top: 18px;
+    }
+    .table-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th { background: #f5f7fa; padding: 9px 13px; text-align: left; color: #555; font-weight: 600; border-bottom: 2px solid #e8ecf0; }
+    td { padding: 9px 13px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.73rem; font-weight: 600; }
+    .badge-high { background: #e8f5e9; color: #2e7d32; }
+    .badge-mid  { background: #fff8e1; color: #f57f17; }
+    .badge-low  { background: #fce4ec; color: #c62828; }
+    .badge-face { background: #e3f2fd; color: #1565c0; }
+    .badge-body { background: #f3e5f5; color: #6a1b9a; }
+    .badge-eye  { background: #e8f5e9; color: #2e7d32; }
+
+    /* overview side-by-side */
+    .country-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .country-box { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .country-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+
+    .note-box {
+      background: #fffde7; border-left: 4px solid #f9a825;
+      border-radius: 8px; padding: 12px 16px; margin-top: 14px;
+      font-size: 0.82rem; color: #5d4037; line-height: 1.6;
+    }
+
+    @media (max-width: 860px) {
+      .charts-grid, .country-cols { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .section { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌏 Ultraformer MPT 3국 시술가 비교</h1>
+  <p>태국 (2026.01.29) · 중국 (2026.02) · 브라질 (2026.02.09) | 환율: 1 USD ≈ 33 THB ≈ 7.2 CNY ≈ 6 BRL</p>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview')">🌏 통합 비교</button>
+    <button class="tab-btn" data-tab="china" onclick="switchTab('china')">🇨🇳 중국</button>
+    <button class="tab-btn" data-tab="thailand" onclick="switchTab('thailand')">🇹🇭 태국</button>
+    <button class="tab-btn" data-tab="brazil" onclick="switchTab('brazil')">🇧🇷 브라질</button>
+  </nav>
+</header>
+
+<!-- ═══════════════════════════════════ TAB: 통합 ═══════════════════════════════════ -->
+<div id="tab-overview" class="tab-content active">
+  <div class="section">
+
+    <div class="country-cols" style="grid-template-columns:1fr 1fr 1fr;">
+      <!-- 중국 -->
+      <div class="country-box" style="border-top: 4px solid #c62828;">
+        <h3>🇨🇳 중국 (China)</h3>
+        <div class="stats-row" id="ov-cn-stats"></div>
+      </div>
+      <!-- 태국 -->
+      <div class="country-box" style="border-top: 4px solid #1565c0;">
+        <h3>🇹🇭 태국 (Thailand)</h3>
+        <div class="stats-row" id="ov-th-stats"></div>
+      </div>
+      <!-- 브라질 -->
+      <div class="country-box" style="border-top: 4px solid #2e7d32;">
+        <h3>🇧🇷 브라질 (Brazil)</h3>
+        <div class="stats-row" id="ov-br-stats"></div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2>💱 얼굴 시술 평균가 3국 비교 (USD 환산 기준)</h2>
+        <canvas id="ov-compareChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📉 국가별 평균 할인율 비교</h2>
+        <canvas id="ov-discountChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📊 태국 샷수별 평균 할인가 (THB)</h2>
+        <canvas id="ov-thChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📊 중국 병원별 온라인가 (CNY, 상위 10)</h2>
+        <canvas id="ov-cnChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📊 브라질 시술 부위별 가격 (BRL)</h2>
+        <canvas id="ov-brChart"></canvas>
+      </div>
+    </div>
+
+    <div class="note-box">
+      ⚠️ <strong>데이터 특성 차이:</strong>
+      🇨🇳 중국(소영)은 <strong>병원별 면부 패키지 온라인 가격</strong>, 할인율은 정가 대비.
+      🇹🇭 태국은 <strong>샷수 기반 패키지 + 다양한 할인율</strong> 적용 클리닉별 가격.
+      🇧🇷 브라질은 <strong>Trinks 플랫폼 42개 클리닉 공통 고정가</strong> (할인가 정보 없음).
+      USD 환산: 1 USD ≈ 7.2 CNY ≈ 33 THB ≈ 6 BRL (2026년 1월 기준 추정)
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB: 태국 ═══════════════════════════════════ -->
+<div id="tab-thailand" class="tab-content">
+  <div class="section">
+    <div class="stats-row" id="th-stats"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h2>📊 샷수별 평균 할인가 (THB)</h2>
+        <canvas id="th-shotPrice"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>💸 정가 vs 할인가 비교 (샷수별)</h2>
+        <canvas id="th-compare"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🏥 클리닉별 평균 할인율 Top 10</h2>
+        <canvas id="th-discount"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📈 샷당 가격 분포 (할인가 기준, THB/샷)</h2>
+        <canvas id="th-perShot"></canvas>
+      </div>
+    </div>
+    <div class="table-card">
+      <h2>📋 전체 데이터 (할인율 내림차순)</h2>
+      <table>
+        <thead><tr><th>병원명</th><th>샷수</th><th>정가 (฿)</th><th>할인가 (฿)</th><th>할인율</th><th>샷당 가격 (฿)</th></tr></thead>
+        <tbody id="th-tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB: 중국 ═══════════════════════════════════ -->
+<div id="tab-china" class="tab-content">
+  <div class="section">
+    <div class="stats-row" id="cn-stats"></div>
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2>🏥 병원별 온라인 가격 (CNY) — 할인율 내림차순</h2>
+        <canvas id="cn-hospitalChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>💸 정가 vs 온라인가 비교</h2>
+        <canvas id="cn-compareChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🗂️ 시술 부위별 건수 및 평균가</h2>
+        <canvas id="cn-areaChart"></canvas>
+      </div>
+    </div>
+    <div class="table-card">
+      <h2>📋 전체 데이터 (할인율 내림차순)</h2>
+      <table>
+        <thead><tr><th>병원명</th><th>시술 부위</th><th>정가 (¥)</th><th>온라인가 (¥)</th><th>할인율</th><th>USD 환산</th></tr></thead>
+        <tbody id="cn-tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ TAB: 브라질 ═══════════════════════════════════ -->
+<div id="tab-brazil" class="tab-content">
+  <div class="section">
+    <div class="stats-row" id="br-stats"></div>
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2>💰 시술 부위별 가격 (BRL) — 플랫폼 고정가</h2>
+        <canvas id="br-servicePrice"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🏷️ 시술 영역 분류별 평균가 (BRL)</h2>
+        <canvas id="br-areaChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>⏱️ 시술 시간 vs 가격</h2>
+        <canvas id="br-durationChart"></canvas>
+      </div>
+    </div>
+    <div class="table-card">
+      <h2>📋 브라질 시술 카탈로그 (42개 클리닉 공통 고정가)</h2>
+      <table>
+        <thead><tr><th>시술명</th><th>영역</th><th>소요시간</th><th>가격 (R$)</th><th>USD 환산</th></tr></thead>
+        <tbody id="br-tableBody"></tbody>
+      </table>
+    </div>
+    <div class="table-card" style="margin-top:18px">
+      <h2>🏥 등록 클리닉 목록 (총 42개)</h2>
+      <table>
+        <thead><tr><th>#</th><th>클리닉명</th><th>등록 시술 수</th></tr></thead>
+        <tbody id="br-clinicBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════ RAW DATA ═══════════════════════ */
+
+// Thailand: [clinic, name, shots, original_thb, discounted_thb]
+const thRaw = [
+  ["Vincent Clinic Asok Bangkok","Program Ultraformer MPT (200 Shots)",200,16799,12999],
+  ["Vincent Clinic Asok Bangkok","Program Ultraformer MPT (800 Shots)",800,38399,29990],
+  ["Vincent Clinic Asok Bangkok","Program Ultraformer MPT (400 Shots)",400,28799,19999],
+  ["Vincent Clinic Asok Bangkok","Program Ultraformer MPT (600 Shots)",600,35999,28372],
+  ["Asia Clinic Marche Thonglor","Ultraformer MPT (400 Shots) Free Pico Laser",400,22000,8900],
+  ["Asia Clinic Marche Thonglor","Ultraformer MPT (400 Shots) Free Botox",400,20000,8900],
+  ["Asia Clinic Marche Thonglor","Ultraformer MPT (400 Shots) Free Diode Laser",400,18000,8900],
+  ["Bdl Clinic","Ultraformer MPT (300 Shots)",300,21000,3799],
+  ["Bdl Clinic","Ultraformer MPT (600 Shots)",600,40000,5799],
+  ["Vincent Clinic Iconsiam","Program Ultraformer MPT (200 Shots)",200,16799,12999],
+  ["Vincent Clinic Iconsiam","Program Ultraformer MPT (800 Shots)",800,38399,29990],
+  ["Vincent Clinic Iconsiam","Program Ultraformer MPT (600 Shots)",600,35999,28372],
+  ["Vincent Clinic Iconsiam","Program Ultraformer MPT (400 Shots)",400,28799,19999],
+  ["Vitaline Neuro Aesthetic","Ultraformer MPT Facial Lifting (300 Shots)",300,15999,10999],
+  ["Vitaline Neuro Aesthetic","Ultraformer MPT Facial Lifting (200 Shots)",200,13900,7400],
+  ["Vitaline Neuro Aesthetic","Ultraformer MPT Cheeks & Chin (400 Shots)",400,24999,12990],
+  ["De Wow Clinic","Ultraformer MPT Facial (300 Shots)",300,12000,5999],
+  ["Laor Clinic","Ultraformer MPT (200 Shots)",200,6990,2999],
+  ["Laor Clinic","Ultraformer MPT (300 Shots)",300,10000,4999],
+  ["Laor Clinic","Ultraformer MPT (600 Shots)",600,15000,9900],
+  ["Laor Clinic","Ultraformer MPT (500 Shots)",500,11999,7999],
+  ["Edition Clinic","Edition V-Line (400 Shots)",400,24000,18500],
+  ["Edition Clinic","Eye Lifting (100 Shots)",100,5000,4260],
+  ["Edition Clinic","Lifting Underarms (400 Shots)",400,23000,18500],
+  ["Obliv Young Clinic","Ultraformer MPT (300 Shots)",300,15900,8999],
+  ["Progression Clinic","Ultraformer MPT (800 Shots)",800,39900,16999],
+  ["Progression Clinic","Ultraformer MPT (600 Shots)",600,28900,12999],
+  ["Progression Clinic","Ultraformer MPT (400 Shots)",400,19500,9214],
+  ["Progression Clinic","Ultraformer MPT Facial (200 Shots)",200,7900,5999],
+  ["Progression Clinic","Ultraformer MPT Facial (100 Shots)",100,4900,2499],
+  ["The Miu Clinic Ramindra","Ultraformer MPT Face Lifting (100 Shots)",100,5999,1999],
+  ["Meditique Clinic","Ultraformer MPT Full Face (500 Shots)",500,39990,29990],
+  ["Meditique Clinic","Ultraformer MPT Full Face (300 Shots)",300,32490,22490],
+  ["Meditique Clinic","Ultraformer MPT Jawline (200 Shots)",200,24990,14990],
+  ["The Miu Clinic Lak Si","Ultraformer MPT Face Lifting (100 Shots)",100,5999,1999],
+  ["Aestima Clinic Siam Paragon","Ultraformer MPT Facial Lifting (250 Shots)",250,12500,9500],
+  ["Aestima Clinic Siam Paragon","Ultraformer MPT Facial Lifting (400 Shots)",400,20000,15500],
+  ["Vincent Clinic Promenade","Program Ultraformer MPT (200 Shots)",200,16799,12999],
+  ["Vincent Clinic Promenade","Program Ultraformer MPT (400 Shots)",400,28799,19999],
+  ["Vincent Clinic Promenade","Program Ultraformer MPT (800 Shots)",800,38399,29990],
+  ["Vincent Clinic Promenade","Program Ultraformer MPT (600 Shots)",600,35999,28226],
+  ["Romrawin Clinic (multi)","Ultraformer MPT 4D Lift (400 Shots) First Trial",400,40000,15000],
+  ["Romrawin Clinic (multi)","Ultraformer MPT (400 Shots) + Smart Laser",400,43000,24990],
+  ["The Ritz Clinic","Ultraformer MPT (400 Lines)",400,20000,15900],
+  ["Gmn Clinic Bearing","Ultraformer MPT (100 Shots)",100,11999,5999],
+  ["Gmn Clinic Bearing","Ultraformer MPT (500 Shots)",500,44999,29995],
+  ["Gmn Clinic Bearing","Ultraformer MPT (200 Shots)",200,17999,11999],
+  ["Gmn Clinic Bearing","Ultraformer MPT (600 Shots)",600,50999,35990],
+  ["Gmn Clinic Bearing","Ultraformer MPT (400 Shots)",400,35999,23999],
+  ["Gmn Clinic Bearing","Ultraformer MPT (300 Shots)",300,29999,17999],
+  ["Poff Clinic","Ultraformer MPT Lifting (200 Shots)",200,16490,9999],
+  ["Poff Clinic","Ultraformer MPT Lifting (400 Shots)",400,18500,15990],
+  ["Poff Clinic","Ultraformer MPT Lifting (600 Shots)",600,22490,21990],
+  ["Poff Clinic","Ultraformer MPT Lifting (800 Shots)",800,28490,27990],
+  ["The Crown Clinic","Ultraformer MPT (800 Shots)",800,14999,12999],
+  ["Merry Clinic","Ultraformer MPT (700 Shots)",700,70000,45500],
+  ["Merry Clinic","Ultraformer MPT (450 Shots)",450,45000,29250],
+  ["Merry Clinic","Ultraformer MPT (300 Shots)",300,30000,19500],
+  ["Reva Clinic","Programs Ultraformer MPT (400 Shots)",400,21000,15990],
+  ["Maxi Cosmetic Surgery","Ultraformer MPT (300 Shots)",300,24000,5999],
+  ["Maxi Cosmetic Surgery","Ultraformer MPT (200 Shots)",200,16000,4999],
+  ["Glamora Clinic","Ultraformer MPT Facial Lifting (300 Shots)",300,17000,14999],
+  ["Glamora Clinic","Ultraformer MPT Facial Lifting (100 Shots)",100,10000,4999],
+  ["Ganaeng Clinic","Ultraformer MPT Lifting (200 Shots)",200,10360,5180],
+  ["Ganaeng Clinic","Ultraformer MPT Lifting (300 Shots)",300,15540,7770],
+  ["Ganaeng Clinic","Ultraformer MPT Lifting (100 Shots)",100,5180,2590],
+  ["Ganaeng Clinic","Ultraformer MPT Lifting (600 Shots)",600,19980,9990],
+  ["Sdc Clinic","Ultraformer MPT Facial (100 Shots)",100,5000,2290],
+  ["Emerald Clinic","Ultraformer MPT (500 Shots)",500,75000,8999],
+  ["Root Clinic","Ultraformer MPT Cheeks & Chin (300 Shots)",300,19900,9899],
+  ["The Miu Wellbeing Bangna","Ultraformer MPT Face Lifting (100 Shots)",100,5999,1999],
+];
+const thData = thRaw.filter(d => d[2] > 0 && d[4] !== null);
+
+// Brazil: [service_name, area, duration_min, price_brl]
+// Prices < 10 in original CSV are in thousands (e.g. 4.29 → 4290 BRL)
+const brServices = [
+  { name: "Ultraformer MPT (Generic)",              area: "얼굴",  dur: 60,  price: 650  },
+  { name: "BOLSA OCULAR (눈 밑 주머니)",             area: "눈",    dur: 20,  price: 790  },
+  { name: "BICHECTOMIA (볼 지방 제거)",              area: "얼굴",  dur: 40,  price: 1350 },
+  { name: "FOX EYES (폭스아이 리프팅)",              area: "눈",    dur: 60,  price: 1648 },
+  { name: "CULOTE / BANANINHA (힙·러브핸들)",        area: "바디",  dur: 60,  price: 2277 },
+  { name: "TERÇO MÉDIO (얼굴 중간 1/3)",             area: "얼굴",  dur: 60,  price: 2772 },
+  { name: "INT COXA (허벅지 안쪽)",                  area: "바디",  dur: 60,  price: 2920 },
+  { name: "ABDOME (복부 전체)",                      area: "바디",  dur: 60,  price: 3588 },
+  { name: "ABDOMEN SUPERIOR (상복부)",               area: "바디",  dur: 60,  price: 4290 },
+  { name: "ABDOMEN INFERIOR (하복부)",               area: "바디",  dur: 120, price: 4290 },
+];
+
+const brClinics = [
+  "Instituto Antacle Trombeli","Venancia's Saude e Beleza","Estetika Beauty",
+  "DanMorelli Espaco Beleza","Giovana Alberti - Estética Integrativa","clinica Samanta Melo",
+  "Santé Esthétique","Gisele Capelli Embelezamento Ltda","Vitalité",
+  "Cristiane Oliveira Estética Avançada","CLIN DRA MONICA SALVADOR","ESPAÇO IRIS FRANÇA",
+  "CLAUDIR - PRAÇA","Valéria Cajaiba Studio","Paula Couto","Clínica Thaís Jonhson",
+  "CLINICA SHIRLEY DIAS","Renove Saúde, Estetica e Bem Estar Ltda","ASIAN GARDEN",
+  "Vitória Régia Estética","Probelle Estetica Avançada","Studio Fisiobela",
+  "Centro de Beleza Botafogo","Clínica Dra. Elisa de Carvalho Prieto","Nova Imagem",
+  "Espaço Pollyanna Ferreira - Saúde e Estética Avançada","Clinica Palacio",
+  "Franquia Posê Bueno","Franquia Posê Araguaia Shopping","Centro Estetico Adrielly Freitas",
+  "Cris Santos Emagrecimento e Estetica","Buffon Bioestética","Clínica Mariana Bubanz",
+  "Serene Epilação & Estética Avançada","Lash Lov Beauty Center","B+ INSTITUT azul",
+  "Majô Lago Norte","MORENA MULHER SANTA FÉ","MORENA MULHER NORTE SUL",
+  "Nathane Chaves Estética Avançada","Juliane Alves Micropigmentação",
+  "Depyl House Fotodepilação e Estética"
+];
+
+const THB_TO_USD = 1 / 33;
+const BRL_TO_USD = 1 / 6;
+const CNY_TO_USD = 1 / 7.2;
+
+// China: [hospital, area_kr, area_cn, price_online_cny, price_original_cny]
+const cnRaw = [
+  ["广州艺星医疗美容医院", "얼굴 전체", "面部", 9010, 10000],
+  ["温州和平国际医院", "얼굴 전체", "面部", 8800, 13800],
+  ["长沙梵童医疗美容", "얼굴 전체", "面部", 8795, 15800],
+  ["武汉五洲整形外科医院", "얼굴 전체", "面部", 8800, 10800],
+  ["重庆军美医疗美容医院", "얼굴 전체", "面部", 8879, 13800],
+  ["宁波薇琳医疗美容医院", "얼굴 전체", "面部", 11597, 12800],
+  ["广州丽合医疗美容医院", "얼굴 전체", "面部", 10691, 11800],
+  ["杭州薇琳医疗美容医院", "얼굴 전체", "面部", 9493, 12800],
+  ["温州和平整形医院", "얼굴 전체", "面部", 8879, 12800],
+  ["辽宁曙光整形外科医院", "얼굴 전체", "面部", 8879, 9800],
+  ["深圳富华医疗美容医院", "단일 부위", "单部位", 10671, 12800],
+  ["上海首尔丽格医疗美容医院", "중하부 얼굴", "中下面部", 9576, 10900],
+  ["西安壹加壹医疗美容医院", "얼굴 전체", "面部", 8799, 9799],
+  ["长沙亚韩医学美容医院", "얼굴 전체", "面部", 8800, 9800],
+  ["长沙叶甄美医疗美容", "얼굴 전체", "面部", 7773, 8800],
+  ["深圳婳美医疗美容医院", "개별 문의", "私信咨询", 17919, 19800],
+  ["沈阳百嘉丽医疗美容医院", "얼굴 전체", "面部", 8837, 10250],
+  ["奥拉克医美（杭州总院）", "얼굴+하악연", "面部含下颌缘", 11578, 18800],
+  ["成都米兰柏羽医学美容医院", "얼굴 전체", "面部", 8785, 10800],
+  ["奥拉克医美（杭州总院）", "얼굴 전체", "面部", 8800, 13800],
+  ["美基元整形美容医院", "얼굴 전체", "面部", 8879, 9800],
+  ["常州苏王医疗美容门诊部", "개별 문의", "私信咨询", 9192, 10800],
+  ["杭州薇琳医疗美容医院", "얼굴+목", "面部+颈部", 12465, 15800],
+  ["深圳非凡医疗美容医院", "얼굴 전체", "面部", 8800, 19800],
+];
+
+/* ═══════════════════════ TAB SWITCHING ═══════════════════════ */
+const chartInstances = [];
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelector(`[data-tab="${id}"]`).classList.add('active');
+  // Resize all charts after tab becomes visible
+  setTimeout(() => chartInstances.forEach(c => c.resize()), 50);
+}
+
+function mkChart(id, config) {
+  const c = new Chart(document.getElementById(id), config);
+  chartInstances.push(c);
+  return c;
+}
+
+/* ═══════════════════════ HELPERS ═══════════════════════ */
+function avg(arr) { return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0; }
+function round(n) { return Math.round(n); }
+function shotAvg(shots) {
+  const items = thData.filter(d => d[2] === shots).map(d => d[4]);
+  return items.length ? round(avg(items)) : null;
+}
+
+/* ═══════════════════════ OVERVIEW TAB ═══════════════════════ */
+// China stats (for overview + later)
+const cnPrices   = cnRaw.map(d => d[3]);
+const cnOriginal = cnRaw.map(d => d[4]);
+const cnDiscRate = cnRaw.map(d => round((1 - d[3]/d[4]) * 100));
+const cnAvgUSD   = round(avg(cnPrices) * CNY_TO_USD);
+const cnMinUSD   = round(Math.min(...cnPrices) * CNY_TO_USD);
+const cnMaxUSD   = round(Math.max(...cnPrices) * CNY_TO_USD);
+const cnAvgDisc  = round(avg(cnDiscRate));
+const cnClinics  = new Set(cnRaw.map(d => d[0])).size;
+
+document.getElementById('ov-cn-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#c62828"><div class="label">등록 병원</div><div class="value">${cnClinics}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">평균 온라인가</div><div class="value">$${cnAvgUSD}</div><div class="sub">USD 환산</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">평균 할인율</div><div class="value">${cnAvgDisc}%</div><div class="sub">할인</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">가격 범위</div><div class="value">$${cnMinUSD}~</div><div class="sub">$${cnMaxUSD} USD</div></div>
+`;
+
+// Thailand stats
+const thPrices   = thData.map(d => d[4]);
+const thDiscRate = thData.map(d => round((1 - d[4]/d[3]) * 100));
+const thAvgUSD   = round(avg(thPrices) * THB_TO_USD);
+const thMinUSD   = round(Math.min(...thPrices) * THB_TO_USD);
+const thMaxUSD   = round(Math.max(...thPrices) * THB_TO_USD);
+const thAvgDisc  = round(avg(thDiscRate));
+const thClinics  = new Set(thData.map(d => d[0])).size;
+
+document.getElementById('ov-th-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">등록 클리닉</div><div class="value">${thClinics}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인가</div><div class="value">$${thAvgUSD}</div><div class="sub">USD 환산</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인율</div><div class="value">${thAvgDisc}%</div><div class="sub">할인</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">가격 범위</div><div class="value">$${thMinUSD}~</div><div class="sub">$${thMaxUSD} USD</div></div>
+`;
+
+// Brazil stats
+const brPrices = brServices.map(s => s.price);
+const brAvgUSD = round(avg(brPrices) * BRL_TO_USD);
+const brMinUSD = round(Math.min(...brPrices) * BRL_TO_USD);
+const brMaxUSD = round(Math.max(...brPrices) * BRL_TO_USD);
+
+document.getElementById('ov-br-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">등록 클리닉</div><div class="value">${brClinics.length}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">평균 시술가</div><div class="value">$${brAvgUSD}</div><div class="sub">USD 환산</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">할인가 정보</div><div class="value">없음</div><div class="sub">고정 플랫폼가</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">가격 범위</div><div class="value">$${brMinUSD}~</div><div class="sub">$${brMaxUSD} USD</div></div>
+`;
+
+// ---- Overview main comparison chart: 얼굴 기본 vs 얼굴+목 (3국)
+const cnFaceAvg     = round(avg(cnRaw.filter(d=>d[2]==='面部').map(d=>d[3])) * CNY_TO_USD);
+const cnFaceNeckAvg = round(avg(cnRaw.filter(d=>d[2]==='面部+颈部').map(d=>d[3])) * CNY_TO_USD);
+const thFaceAvg     = round(avg(thData.filter(d=>[300,400].includes(d[2])).map(d=>d[4])) * THB_TO_USD);
+const thFaceNeckAvg = round(avg(thData.filter(d=>[600,800].includes(d[2])).map(d=>d[4])) * THB_TO_USD);
+const brFaceAvg     = round(avg([650, 1350, 2772].map(v=>v*BRL_TO_USD)));
+const brBodyAvg     = round(avg([3588, 2920, 4290].map(v=>v*BRL_TO_USD)));
+
+mkChart('ov-compareChart', {
+  type: 'bar',
+  data: {
+    labels: ['얼굴 기본 시술', '얼굴+목 / 대형'],
+    datasets: [
+      { label: '🇨🇳 중국 (CNY→USD)', data: [cnFaceAvg, cnFaceNeckAvg], backgroundColor: 'rgba(198,40,40,0.75)', borderRadius: 6 },
+      { label: '🇹🇭 태국 (THB→USD)', data: [thFaceAvg, thFaceNeckAvg], backgroundColor: 'rgba(21,101,192,0.75)', borderRadius: 6 },
+      { label: '🇧🇷 브라질 (BRL→USD)', data: [brFaceAvg, brBodyAvg], backgroundColor: 'rgba(46,125,50,0.75)', borderRadius: 6 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.raw}` } }
+    },
+    scales: { y: { title: { display: true, text: 'USD' }, ticks: { callback: v => '$' + v.toLocaleString() } } }
+  }
+});
+
+// ---- Overview discount comparison chart
+mkChart('ov-discountChart', {
+  type: 'bar',
+  data: {
+    labels: ['🇨🇳 중국', '🇹🇭 태국', '🇧🇷 브라질'],
+    datasets: [{
+      label: '평균 할인율 (%)',
+      data: [cnAvgDisc, thAvgDisc, 0],
+      backgroundColor: ['rgba(198,40,40,0.75)', 'rgba(21,101,192,0.75)', 'rgba(46,125,50,0.4)'],
+      borderRadius: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ctx.raw === 0 ? '할인 정보 없음' : ctx.raw + '%' } }
+    },
+    scales: { y: { max: 60, ticks: { callback: v => v + '%' } } }
+  }
+});
+
+// Overview mini charts
+const thShotBuckets = [100, 200, 300, 400, 500, 600, 800];
+mkChart('ov-thChart', {
+  type: 'bar',
+  data: {
+    labels: thShotBuckets.map(s => s + ' shots'),
+    datasets: [{
+      label: '평균 할인가 (฿)',
+      data: thShotBuckets.map(s => shotAvg(s) || 0),
+      backgroundColor: 'rgba(21,101,192,0.7)', borderRadius: 5
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() } } }
+  }
+});
+
+const cnSortedOv = [...cnRaw].sort((a,b) => b[3]-a[3]).slice(0,10);
+mkChart('ov-cnChart', {
+  type: 'bar',
+  data: {
+    labels: cnSortedOv.map(d => d[0].replace('医疗美容医院','').replace('医学美容医院','').replace('整形外科医院','').replace('整形美容医院','').substring(0,12)),
+    datasets: [{
+      label: '온라인가 (¥)',
+      data: cnSortedOv.map(d => d[3]),
+      backgroundColor: 'rgba(198,40,40,0.7)', borderRadius: 5
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { callback: v => '¥' + v.toLocaleString() } } }
+  }
+});
+
+mkChart('ov-brChart', {
+  type: 'bar',
+  data: {
+    labels: brServices.map(s => s.name.split(' (')[0].split('(')[0].trim().substring(0, 14)),
+    datasets: [{
+      label: '가격 (R$)',
+      data: brServices.map(s => s.price),
+      backgroundColor: brServices.map(s =>
+        s.area === '눈' ? 'rgba(46,125,50,0.8)' :
+        s.area === '얼굴' ? 'rgba(46,125,50,0.55)' : 'rgba(46,125,50,0.3)'
+      ),
+      borderRadius: 5
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { callback: v => 'R$' + v.toLocaleString() } } }
+  }
+});
+
+/* ═══════════════════════ THAILAND TAB ═══════════════════════ */
+document.getElementById('th-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">총 시술 건수</div><div class="value">${thData.length}</div><div class="sub">건</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">등록 클리닉</div><div class="value">${thClinics}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인가</div><div class="value">฿${round(avg(thPrices)).toLocaleString()}</div><div class="sub">THB</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">최저가</div><div class="value">฿${Math.min(...thPrices).toLocaleString()}</div><div class="sub">THB</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">최고가</div><div class="value">฿${Math.max(...thPrices).toLocaleString()}</div><div class="sub">THB</div></div>
+  <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인율</div><div class="value">${thAvgDisc}%</div><div class="sub">할인</div></div>
+`;
+
+// Chart 1: shot price
+const shotGroups = {};
+thData.forEach(d => {
+  if (!shotGroups[d[2]]) shotGroups[d[2]] = [];
+  shotGroups[d[2]].push(d[4]);
+});
+const shotKeys = Object.keys(shotGroups).map(Number).sort((a,b)=>a-b);
+
+mkChart('th-shotPrice', {
+  type: 'bar',
+  data: {
+    labels: shotKeys.map(k => k + ' shots'),
+    datasets: [{ label: '평균 할인가 (฿)', data: shotKeys.map(k => round(avg(shotGroups[k]))), backgroundColor: 'rgba(21,101,192,0.75)', borderRadius: 6 }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() } } } }
+});
+
+// Chart 2: compare
+const fixedShots = [100, 200, 300, 400, 500, 600, 800];
+mkChart('th-compare', {
+  type: 'bar',
+  data: {
+    labels: fixedShots.map(s => s + ' shots'),
+    datasets: [
+      { label: '정가', data: fixedShots.map(s => { const i = thData.filter(d=>d[2]===s); return i.length ? round(avg(i.map(d=>d[3]))) : 0; }), backgroundColor: 'rgba(239,83,80,0.45)', borderRadius: 4 },
+      { label: '할인가', data: fixedShots.map(s => { const i = thData.filter(d=>d[2]===s); return i.length ? round(avg(i.map(d=>d[4]))) : 0; }), backgroundColor: 'rgba(21,101,192,0.7)', borderRadius: 4 }
+    ]
+  },
+  options: { responsive: true, scales: { y: { ticks: { callback: v => '฿' + v.toLocaleString() } } } }
+});
+
+// Chart 3: clinic discount
+const clinicMap = {};
+thData.forEach(d => {
+  if (!clinicMap[d[0]]) clinicMap[d[0]] = [];
+  clinicMap[d[0]].push(round((1 - d[4]/d[3]) * 100));
+});
+const clinicDisc = Object.entries(clinicMap).map(([n,r]) => ({ name: n.length > 22 ? n.slice(0,22)+'…' : n, avg: round(avg(r)) })).sort((a,b)=>b.avg-a.avg).slice(0,10);
+
+mkChart('th-discount', {
+  type: 'bar',
+  data: {
+    labels: clinicDisc.map(c => c.name),
+    datasets: [{ label: '평균 할인율 (%)', data: clinicDisc.map(c => c.avg),
+      backgroundColor: clinicDisc.map(c => c.avg>=70?'rgba(56,142,60,0.75)':c.avg>=50?'rgba(245,127,23,0.75)':'rgba(198,40,40,0.75)'),
+      borderRadius: 6 }]
+  },
+  options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { max: 100, ticks: { callback: v => v+'%' } } } }
+});
+
+// Chart 4: per shot scatter
+mkChart('th-perShot', {
+  type: 'scatter',
+  data: {
+    datasets: [{ label: '샷당 가격 (฿)', data: thData.map(d => ({ x: d[2], y: round(d[4]/d[2]) })), backgroundColor: 'rgba(21,101,192,0.5)', pointRadius: 6 }]
+  },
+  options: { responsive: true, scales: {
+    x: { title: { display: true, text: '샷수' } },
+    y: { title: { display: true, text: '샷당 가격 (฿)' }, ticks: { callback: v => '฿' + v.toLocaleString() } }
+  }}
+});
+
+// Table
+const thTable = thData.map(d => ({
+  clinic: d[0], shots: d[2], original: d[3], discounted: d[4],
+  rate: round((1 - d[4]/d[3]) * 100), perShot: round(d[4]/d[2])
+})).sort((a,b) => b.rate - a.rate);
+
+const thTbody = document.getElementById('th-tableBody');
+thTable.forEach(r => {
+  const bc = r.rate>=70?'badge-high':r.rate>=50?'badge-mid':'badge-low';
+  thTbody.innerHTML += `<tr>
+    <td>${r.clinic}</td><td>${r.shots}</td>
+    <td>฿${r.original.toLocaleString()}</td>
+    <td><strong>฿${r.discounted.toLocaleString()}</strong></td>
+    <td><span class="badge ${bc}">${r.rate}%</span></td>
+    <td>฿${r.perShot.toLocaleString()}</td>
+  </tr>`;
+});
+
+/* ═══════════════════════ BRAZIL TAB ═══════════════════════ */
+const brAvgBRL = round(avg(brServices.map(s => s.price)));
+document.getElementById('br-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">등록 클리닉</div><div class="value">${brClinics.length}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">시술 종류</div><div class="value">${brServices.length}</div><div class="sub">가지</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">평균 시술가</div><div class="value">R$${brAvgBRL.toLocaleString()}</div><div class="sub">BRL</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">최저가</div><div class="value">R$${Math.min(...brServices.map(s=>s.price)).toLocaleString()}</div><div class="sub">BRL</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">최고가</div><div class="value">R$${Math.max(...brServices.map(s=>s.price)).toLocaleString()}</div><div class="sub">BRL</div></div>
+  <div class="stat-card" style="--accent:#2e7d32"><div class="label">할인율 정보</div><div class="value">N/A</div><div class="sub">고정가</div></div>
+`;
+
+// Chart: service price (sorted)
+const brSorted = [...brServices].sort((a,b) => a.price - b.price);
+mkChart('br-servicePrice', {
+  type: 'bar',
+  data: {
+    labels: brSorted.map(s => s.name.length > 28 ? s.name.slice(0,28)+'…' : s.name),
+    datasets: [{
+      label: '가격 (R$)',
+      data: brSorted.map(s => s.price),
+      backgroundColor: brSorted.map(s =>
+        s.area==='눈' ? 'rgba(46,125,50,0.8)' :
+        s.area==='얼굴' ? 'rgba(21,101,192,0.7)' : 'rgba(156,39,176,0.65)'
+      ),
+      borderRadius: 6
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { afterLabel: ctx => '≈ $' + round(ctx.raw * BRL_TO_USD) + ' USD' } }
+    },
+    scales: { x: { ticks: { callback: v => 'R$' + v.toLocaleString() } } }
+  }
+});
+
+// Chart: area average
+const areas = ['눈', '얼굴', '바디'];
+const areaColors = ['rgba(46,125,50,0.75)', 'rgba(21,101,192,0.75)', 'rgba(156,39,176,0.65)'];
+mkChart('br-areaChart', {
+  type: 'bar',
+  data: {
+    labels: areas,
+    datasets: [{
+      label: '영역별 평균가 (R$)',
+      data: areas.map(a => { const items = brServices.filter(s=>s.area===a).map(s=>s.price); return items.length ? round(avg(items)) : 0; }),
+      backgroundColor: areaColors, borderRadius: 6
+    }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => 'R$' + v.toLocaleString() } } } }
+});
+
+// Chart: duration vs price scatter
+mkChart('br-durationChart', {
+  type: 'scatter',
+  data: {
+    datasets: [{
+      label: '시술',
+      data: brServices.map(s => ({ x: s.dur, y: s.price })),
+      backgroundColor: brServices.map(s =>
+        s.area==='눈' ? 'rgba(46,125,50,0.7)' :
+        s.area==='얼굴' ? 'rgba(21,101,192,0.7)' : 'rgba(156,39,176,0.65)'
+      ),
+      pointRadius: 10
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => { const s = brServices[ctx.dataIndex]; return `${s.name}: R$${s.price} (${s.dur}분)`; } } }
+    },
+    scales: {
+      x: { title: { display: true, text: '소요 시간 (분)' } },
+      y: { title: { display: true, text: '가격 (R$)' }, ticks: { callback: v => 'R$' + v.toLocaleString() } }
+    }
+  }
+});
+
+// Brazil service table
+const brTbody = document.getElementById('br-tableBody');
+const areaBadge = { '눈': 'badge-eye', '얼굴': 'badge-face', '바디': 'badge-body' };
+[...brServices].sort((a,b)=>a.price-b.price).forEach(s => {
+  brTbody.innerHTML += `<tr>
+    <td>${s.name}</td>
+    <td><span class="badge ${areaBadge[s.area]}">${s.area}</span></td>
+    <td>${s.dur}분</td>
+    <td><strong>R$${s.price.toLocaleString()}</strong></td>
+    <td>$${round(s.price * BRL_TO_USD)}</td>
+  </tr>`;
+});
+
+// Brazil clinics table
+const brClinicsBody = document.getElementById('br-clinicBody');
+brClinics.forEach((c, i) => {
+  brClinicsBody.innerHTML += `<tr><td>${i+1}</td><td>${c}</td><td>${brServices.length}가지</td></tr>`;
+});
+
+/* ═══════════════════════ CHINA TAB ═══════════════════════ */
+const cnAvgPrice = round(avg(cnPrices));
+document.getElementById('cn-stats').innerHTML = `
+  <div class="stat-card" style="--accent:#c62828"><div class="label">총 시술 건수</div><div class="value">${cnRaw.length}</div><div class="sub">건</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">등록 병원 수</div><div class="value">${cnClinics}</div><div class="sub">개</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">평균 온라인가</div><div class="value">¥${cnAvgPrice.toLocaleString()}</div><div class="sub">CNY</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">최저가</div><div class="value">¥${Math.min(...cnPrices).toLocaleString()}</div><div class="sub">CNY</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">최고가</div><div class="value">¥${Math.max(...cnPrices).toLocaleString()}</div><div class="sub">CNY</div></div>
+  <div class="stat-card" style="--accent:#c62828"><div class="label">평균 할인율</div><div class="value">${cnAvgDisc}%</div><div class="sub">할인</div></div>
+`;
+
+// China Chart 1: Hospital price ranking (horizontal bar, sorted by discount rate)
+const cnSortedDisc = [...cnRaw].map(d => ({
+  name: d[0].replace(/[【】【】]/g,'').substring(0, 14),
+  online: d[3], original: d[4],
+  rate: round((1 - d[3]/d[4]) * 100)
+})).sort((a,b) => b.rate - a.rate);
+
+mkChart('cn-hospitalChart', {
+  type: 'bar',
+  data: {
+    labels: cnSortedDisc.map(d => d.name),
+    datasets: [{
+      label: '온라인가 (¥)',
+      data: cnSortedDisc.map(d => d.online),
+      backgroundColor: cnSortedDisc.map(d =>
+        d.rate >= 40 ? 'rgba(198,40,40,0.85)' :
+        d.rate >= 20 ? 'rgba(198,40,40,0.6)' : 'rgba(198,40,40,0.35)'
+      ),
+      borderRadius: 5
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: {
+        afterLabel: ctx => `할인율: ${cnSortedDisc[ctx.dataIndex].rate}% | ¥${cnSortedDisc[ctx.dataIndex].original.toLocaleString()} → ¥${cnSortedDisc[ctx.dataIndex].online.toLocaleString()}`
+      }}
+    },
+    scales: { x: { ticks: { callback: v => '¥' + v.toLocaleString() } } }
+  }
+});
+
+// China Chart 2: Online vs Original comparison
+const cnSortedPrice = [...cnRaw].sort((a,b) => a[3]-b[3]);
+mkChart('cn-compareChart', {
+  type: 'bar',
+  data: {
+    labels: cnSortedPrice.map(d => d[0].substring(0, 10)),
+    datasets: [
+      { label: '정가 (¥)', data: cnSortedPrice.map(d => d[4]), backgroundColor: 'rgba(239,83,80,0.4)', borderRadius: 3 },
+      { label: '온라인가 (¥)', data: cnSortedPrice.map(d => d[3]), backgroundColor: 'rgba(198,40,40,0.75)', borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+      y: { ticks: { callback: v => '¥' + v.toLocaleString() } }
+    }
+  }
+});
+
+// China Chart 3: Area breakdown
+const cnAreaMap = {};
+cnRaw.forEach(d => {
+  const k = d[1];
+  if (!cnAreaMap[k]) cnAreaMap[k] = { count: 0, prices: [] };
+  cnAreaMap[k].count++;
+  cnAreaMap[k].prices.push(d[3]);
+});
+const cnAreas = Object.entries(cnAreaMap).sort((a,b) => b[1].count - a[1].count);
+
+mkChart('cn-areaChart', {
+  type: 'bar',
+  data: {
+    labels: cnAreas.map(([k]) => k),
+    datasets: [
+      { label: '건수', data: cnAreas.map(([,v]) => v.count), backgroundColor: 'rgba(198,40,40,0.7)', yAxisID: 'y', borderRadius: 4 },
+      { label: '평균 온라인가 (¥)', data: cnAreas.map(([,v]) => round(avg(v.prices))), backgroundColor: 'rgba(198,40,40,0.25)', yAxisID: 'y2', borderRadius: 4, type: 'line', fill: false, pointRadius: 6, borderColor: 'rgba(198,40,40,0.8)' }
+    ]
+  },
+  options: {
+    responsive: true,
+    scales: {
+      y:  { title: { display: true, text: '건수' }, position: 'left' },
+      y2: { title: { display: true, text: '평균가 (¥)' }, position: 'right', grid: { drawOnChartArea: false },
+            ticks: { callback: v => '¥' + v.toLocaleString() } }
+    }
+  }
+});
+
+// China table
+const cnTableData = cnRaw.map(d => ({
+  hospital: d[0], areaKr: d[1], online: d[3], original: d[4],
+  rate: round((1 - d[3]/d[4]) * 100),
+  usd: round(d[3] * CNY_TO_USD)
+})).sort((a,b) => b.rate - a.rate);
+
+const cnTbody = document.getElementById('cn-tableBody');
+cnTableData.forEach(r => {
+  const bc = r.rate >= 40 ? 'badge-high' : r.rate >= 20 ? 'badge-mid' : 'badge-low';
+  cnTbody.innerHTML += `<tr>
+    <td>${r.hospital}</td>
+    <td><span class="badge badge-face">${r.areaKr}</span></td>
+    <td>¥${r.original.toLocaleString()}</td>
+    <td><strong>¥${r.online.toLocaleString()}</strong></td>
+    <td><span class="badge ${bc}">${r.rate}%</span></td>
+    <td>$${r.usd}</td>
+  </tr>`;
+});
+</script>
+</body>
+</html>
