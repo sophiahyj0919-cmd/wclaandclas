@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>태국 · Ultraformer MPT 시술가</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #333; }
+
+    header { background: linear-gradient(135deg, #1b1b3a, #2d3177); color: white; padding: 28px 40px 0; }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p  { margin-top: 4px; opacity: 0.7; font-size: 0.85rem; }
+
+    .tab-nav { display: flex; gap: 4px; margin-top: 20px; }
+    .tab-btn {
+      padding: 10px 24px; border: none; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7); border-radius: 8px 8px 0 0;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.25); }
+    .tab-btn.active { background: #f0f4f8; color: #2d3177; }
+
+    .section { padding: 24px 40px; }
+
+    .update-badge {
+      display: inline-block; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.85); padding: 4px 12px; border-radius: 20px;
+      font-size: 0.78rem; margin-top: 8px; margin-bottom: 4px;
+    }
+
+    .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 18px 24px;
+      flex: 1; min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid var(--accent, #1565c0);
+    }
+    .stat-card .label { font-size: 0.73rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--accent, #1565c0); margin-top: 2px; }
+    .stat-card .sub   { font-size: 0.78rem; color: #bbb; margin-top: 1px; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .chart-card  { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    .chart-card canvas { max-height: 320px; }
+
+    .table-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-top: 18px; }
+    .table-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th { background: #f5f7fa; padding: 9px 13px; text-align: left; color: #555; font-weight: 600; border-bottom: 2px solid #e8ecf0; }
+    td { padding: 9px 13px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.73rem; font-weight: 600; }
+    .badge-high { background: #e8f5e9; color: #2e7d32; }
+    .badge-mid  { background: #fff8e1; color: #f57f17; }
+    .badge-low  { background: #fce4ec; color: #c62828; }
+    .badge-device { background: #e8eaf6; color: #283593; }
+
+    .empty-msg { text-align: center; padding: 60px 20px; color: #999; font-size: 0.95rem; }
+
+    .filter-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filter-row label { font-size: 0.85rem; color: #555; font-weight: 600; }
+    .filter-row select { padding: 6px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.85rem; }
+
+    /* 기기 탭 */
+    .device-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .device-tab {
+      padding: 7px 16px; border-radius: 20px; border: 2px solid #c5cae9;
+      background: white; color: #3949ab; font-size: 0.83rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .device-tab:hover { background: #e8eaf6; }
+    .device-tab.active { background: #3949ab; color: white; border-color: #3949ab; }
+
+    @media (max-width: 860px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .section { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌏 Ultraformer MPT 3국 시술가 비교</h1>
+  <p>태국 · 중국 · 브라질 | 환율: 1 USD ≈ 33 THB ≈ 7.2 CNY ≈ 6 BRL</p>
+  <div id="updateBadge"></div>
+  <nav class="tab-nav">
+    <a class="tab-btn" href="/">🌏 통합 비교</a>
+    <a class="tab-btn" href="/china.html">🇨🇳 중국</a>
+    <a class="tab-btn active" href="/thailand.html">🇹🇭 태국</a>
+    <a class="tab-btn" href="/brazil.html">🇧🇷 브라질</a>
+  </nav>
+</header>
+
+<div class="section">
+  <div class="stats-row" id="th-stats"><div class="empty-msg">로딩 중...</div></div>
+
+  <div id="th-main" style="display:none">
+
+    <!-- 기기별 탭 -->
+    <div class="device-tabs" id="deviceTabs"></div>
+
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2 id="deviceChartTitle">🔬 기기별 평균 할인가 비교 (THB)</h2>
+        <canvas id="th-deviceChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📊 샷수별 평균 할인가 (THB)</h2>
+        <canvas id="th-shotPrice"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>💸 정가 vs 할인가 비교 (샷수별)</h2>
+        <canvas id="th-compare"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🏙️ 지역별 평균 할인가 — 600샷 기준 (THB)</h2>
+        <canvas id="th-cityChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>📈 샷당 가격 분포 (할인가 기준, THB/샷)</h2>
+        <canvas id="th-perShot"></canvas>
+      </div>
+    </div>
+
+    <!-- 히스토리 섹션 -->
+    <div class="table-card" id="historySection" style="display:none; margin-top:18px">
+      <h2>📈 기기별 평균 할인가 추세 (분기별)</h2>
+      <p id="historyNote" style="font-size:0.8rem;color:#999;margin-bottom:12px"></p>
+      <canvas id="th-historyChart" style="max-height:340px"></canvas>
+    </div>
+
+    <div class="table-card">
+      <h2>📋 전체 데이터 (할인율 내림차순)</h2>
+      <div class="filter-row">
+        <label>기기:</label>
+        <select id="deviceFilter" onchange="applyFilters()">
+          <option value="">전체</option>
+        </select>
+        <label>도시:</label>
+        <select id="cityFilter" onchange="applyFilters()">
+          <option value="">전체</option>
+        </select>
+        <label>샷수:</label>
+        <select id="shotFilter" onchange="applyFilters()">
+          <option value="">전체</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr>
+          <th>기기명</th><th>병원명</th><th>샷수</th><th>도시</th>
+          <th>정가 (฿)</th><th>할인가 (฿)</th><th>할인율</th><th>샷당 가격 (฿)</th>
+        </tr></thead>
+        <tbody id="th-tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="th-empty" style="display:none" class="empty-msg">
+    데이터가 없습니다. <a href="/" style="color:#2d3177">홈</a>에서 데이터 업데이트를 실행해주세요.
+  </div>
+</div>
+
+<script>
+const THB_TO_USD = 1/33;
+function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function round(n) { return Math.round(n); }
+
+const DEVICE_COLORS = [
+  'rgba(21,101,192,0.75)', 'rgba(198,40,40,0.75)', 'rgba(46,125,50,0.75)',
+  'rgba(245,127,23,0.75)', 'rgba(106,27,154,0.75)', 'rgba(0,151,167,0.75)',
+  'rgba(62,39,35,0.65)',
+];
+
+const charts = {};
+function mkChart(id, cfg) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+  return charts[id];
+}
+
+let allData = [];
+let devices = [];
+let activeDevice = '';  // '' = 전체
+let historyData = [];
+
+async function loadData() {
+  const resp = await fetch('/api/thailand').then(r => r.json());
+  const updated = resp.updated;
+  allData = (resp.rows || []).filter(d => d['할인가'] > 0 && d['정가'] > 0);
+  historyData = resp.history || [];
+
+  // 업데이트 날짜 표시
+  if (updated) {
+    const [y, m, d] = updated.split('-');
+    document.getElementById('updateBadge').innerHTML =
+      `<span class="update-badge">📅 데이터 기준: ${y}년 ${parseInt(m)}월 ${parseInt(d)}일</span>`;
+  }
+
+  if (!allData.length) {
+    document.getElementById('th-stats').innerHTML = '';
+    document.getElementById('th-empty').style.display = 'block';
+    return;
+  }
+
+  devices = [...new Set(allData.map(d => d['기기명']))].sort();
+  document.getElementById('th-main').style.display = 'block';
+
+  buildDeviceTabs();
+  buildDeviceFilter();
+  renderAll();
+  renderHistoryChart();
+}
+
+function buildDeviceTabs() {
+  const container = document.getElementById('deviceTabs');
+  const allBtn = document.createElement('button');
+  allBtn.className = 'device-tab active';
+  allBtn.textContent = '전체';
+  allBtn.onclick = () => setDevice('');
+  allBtn.dataset.device = '';
+  container.appendChild(allBtn);
+
+  devices.forEach(dev => {
+    const btn = document.createElement('button');
+    btn.className = 'device-tab';
+    btn.textContent = dev;
+    btn.dataset.device = dev;
+    btn.onclick = () => setDevice(dev);
+    container.appendChild(btn);
+  });
+}
+
+function setDevice(dev) {
+  activeDevice = dev;
+  document.querySelectorAll('.device-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.device === dev);
+  });
+  document.getElementById('deviceFilter').value = dev;
+  renderAll();
+}
+
+function buildDeviceFilter() {
+  const sel = document.getElementById('deviceFilter');
+  devices.forEach(dev => {
+    const o = document.createElement('option');
+    o.value = dev; o.textContent = dev;
+    sel.appendChild(o);
+  });
+
+  const cities = [...new Set(allData.map(d=>d['도시']).filter(Boolean))].sort();
+  const cityEl = document.getElementById('cityFilter');
+  cities.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; cityEl.appendChild(o); });
+
+  const shots = [...new Set(allData.map(d=>d['샷수']).filter(Boolean))].sort((a,b)=>a-b);
+  const shotEl = document.getElementById('shotFilter');
+  shots.forEach(s => { const o=document.createElement('option'); o.value=s; o.textContent=s+' shots'; shotEl.appendChild(o); });
+}
+
+function getFiltered() {
+  const city = document.getElementById('cityFilter').value;
+  const shot = document.getElementById('shotFilter').value;
+  const dev  = document.getElementById('deviceFilter').value;
+  return allData.filter(d => {
+    if (dev  && d['기기명'] !== dev) return false;
+    if (city && d['도시']   !== city) return false;
+    if (shot && d['샷수']   !== Number(shot)) return false;
+    return true;
+  });
+}
+
+function applyFilters() {
+  // 기기 필터 드롭다운 변경 시 탭도 동기화
+  const dev = document.getElementById('deviceFilter').value;
+  if (dev !== activeDevice) {
+    activeDevice = dev;
+    document.querySelectorAll('.device-tab').forEach(b => {
+      b.classList.toggle('active', b.dataset.device === dev);
+    });
+  }
+  renderAll();
+}
+
+function renderAll() {
+  const filtered = getFiltered();
+  renderStats(filtered);
+  renderDeviceChart();
+  renderShotCharts(filtered);
+  renderCityChart(filtered);
+  renderPerShotChart(filtered);
+  renderTable(filtered);
+}
+
+function renderStats(data) {
+  const prices    = data.map(d => d['할인가']);
+  const discRates = data.map(d => round((1 - d['할인가']/d['정가'])*100));
+  const clinics   = new Set(data.map(d => d['병원명'])).size;
+  const devLabel  = activeDevice || '전체 기기';
+  document.getElementById('th-stats').innerHTML = `
+    <div class="stat-card"><div class="label">기기</div><div class="value" style="font-size:1.1rem">${devLabel}</div><div class="sub">${devices.length}종 수집</div></div>
+    <div class="stat-card"><div class="label">총 시술 건수</div><div class="value">${data.length}</div><div class="sub">건</div></div>
+    <div class="stat-card"><div class="label">등록 클리닉</div><div class="value">${clinics}</div><div class="sub">개</div></div>
+    <div class="stat-card"><div class="label">평균 할인가</div><div class="value">฿${prices.length?round(avg(prices)).toLocaleString():'-'}</div><div class="sub">THB</div></div>
+    <div class="stat-card"><div class="label">최저가</div><div class="value">฿${prices.length?Math.min(...prices).toLocaleString():'-'}</div><div class="sub">THB</div></div>
+    <div class="stat-card"><div class="label">평균 할인율</div><div class="value">${discRates.length?round(avg(discRates)):'-'}%</div><div class="sub">할인</div></div>`;
+}
+
+function renderDeviceChart() {
+  // 기기별 평균 할인가 비교 (항상 전체 기준)
+  const devAvgs = devices.map(dev => {
+    const prices = allData.filter(d => d['기기명'] === dev).map(d => d['할인가']);
+    return { dev, avg: prices.length ? round(avg(prices)) : 0, count: prices.length };
+  }).sort((a,b) => b.avg - a.avg);
+
+  mkChart('th-deviceChart', {
+    type: 'bar',
+    data: {
+      labels: devAvgs.map(d => d.dev),
+      datasets: [{
+        label: '평균 할인가 (฿)',
+        data: devAvgs.map(d => d.avg),
+        backgroundColor: devAvgs.map((_, i) => DEVICE_COLORS[i % DEVICE_COLORS.length]),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          afterLabel: ctx => {
+            const d = devAvgs[ctx.dataIndex];
+            return `건수: ${d.count}건 | ≈ $${round(d.avg * THB_TO_USD)} USD`;
+          }
+        }}
+      },
+      scales: { y: { ticks: { callback: v => '฿'+v.toLocaleString() } } }
+    }
+  });
+}
+
+function renderShotCharts(data) {
+  const shotGroups = {};
+  data.forEach(d => {
+    if (!d['샷수']) return;
+    if (!shotGroups[d['샷수']]) shotGroups[d['샷수']] = [];
+    shotGroups[d['샷수']].push(d['할인가']);
+  });
+  const shotKeys = Object.keys(shotGroups).map(Number).sort((a,b)=>a-b);
+
+  mkChart('th-shotPrice', {
+    type: 'bar',
+    data: { labels: shotKeys.map(k=>k+' shots'),
+      datasets: [{ label: '평균 할인가 (฿)', data: shotKeys.map(k=>round(avg(shotGroups[k]))),
+        backgroundColor: 'rgba(21,101,192,0.75)', borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v=>'฿'+v.toLocaleString() } } } }
+  });
+
+  const fixedShots = [...new Set(data.filter(d=>d['샷수']).map(d=>d['샷수']))].sort((a,b)=>a-b);
+  mkChart('th-compare', {
+    type: 'bar',
+    data: { labels: fixedShots.map(s=>s+' shots'),
+      datasets: [
+        { label: '정가', data: fixedShots.map(s=>{ const i=data.filter(d=>d['샷수']===s); return i.length?round(avg(i.map(d=>d['정가']))):0; }), backgroundColor: 'rgba(239,83,80,0.45)', borderRadius: 4 },
+        { label: '할인가', data: fixedShots.map(s=>{ const i=data.filter(d=>d['샷수']===s); return i.length?round(avg(i.map(d=>d['할인가']))):0; }), backgroundColor: 'rgba(21,101,192,0.7)', borderRadius: 4 },
+      ] },
+    options: { responsive: true, scales: { y: { ticks: { callback: v=>'฿'+v.toLocaleString() } } } }
+  });
+}
+
+function renderCityChart(data) {
+  // 600샷 데이터만 필터 (없으면 가장 가까운 샷수)
+  const TARGET_SHOT = 600;
+  let shot600 = data.filter(d => d['샷수'] === TARGET_SHOT && d['도시']);
+  if (!shot600.length) {
+    // 600샷 없으면 데이터 전체에서 도시별로
+    shot600 = data.filter(d => d['도시']);
+  }
+
+  const cityMap = {};
+  shot600.forEach(d => {
+    if (!cityMap[d['도시']]) cityMap[d['도시']] = [];
+    cityMap[d['도시']].push(d['할인가']);
+  });
+
+  const cityEntries = Object.entries(cityMap)
+    .map(([city, prices]) => ({ city, avg: round(avg(prices)), count: prices.length, min: Math.min(...prices), max: Math.max(...prices) }))
+    .filter(c => c.count >= 1)
+    .sort((a, b) => a.avg - b.avg);
+
+  if (!cityEntries.length) {
+    if (charts['th-cityChart']) charts['th-cityChart'].destroy();
+    return;
+  }
+
+  mkChart('th-cityChart', {
+    type: 'bar',
+    data: {
+      labels: cityEntries.map(c => c.city),
+      datasets: [
+        { label: '최저가 (฿)', data: cityEntries.map(c => c.min), backgroundColor: 'rgba(21,101,192,0.45)', borderRadius: 4 },
+        { label: '평균가 (฿)', data: cityEntries.map(c => c.avg), backgroundColor: 'rgba(21,101,192,0.8)', borderRadius: 4 },
+        { label: '최고가 (฿)', data: cityEntries.map(c => c.max), backgroundColor: 'rgba(198,40,40,0.4)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: { callbacks: {
+          afterBody: (items) => {
+            const c = cityEntries[items[0].dataIndex];
+            return `샘플 수: ${c.count}건`;
+          }
+        }}
+      },
+      scales: { y: { ticks: { callback: v => '฿'+v.toLocaleString() } } }
+    }
+  });
+}
+
+function renderPerShotChart(data) {
+  mkChart('th-perShot', {
+    type: 'scatter',
+    data: { datasets: [{ label: '샷당 가격 (฿)',
+      data: data.filter(d=>d['샷수']).map(d=>({ x: d['샷수'], y: round(d['할인가']/d['샷수']) })),
+      backgroundColor: 'rgba(21,101,192,0.5)', pointRadius: 6 }] },
+    options: { responsive: true, scales: {
+      x: { title: { display: true, text: '샷수' } },
+      y: { title: { display: true, text: '샷당 가격 (฿)' }, ticks: { callback: v=>'฿'+v.toLocaleString() } }
+    }}
+  });
+}
+
+function renderTable(data) {
+  const rows = data.map(d => ({...d, rate: round((1-d['할인가']/d['정가'])*100)})).sort((a,b)=>b.rate-a.rate);
+  document.getElementById('th-tableBody').innerHTML = rows.map(r => {
+    const bc = r.rate>=70?'badge-high':r.rate>=50?'badge-mid':'badge-low';
+    const perShot = r['샷수'] ? '฿'+round(r['할인가']/r['샷수']).toLocaleString() : '-';
+    return `<tr>
+      <td><span class="badge badge-device">${r['기기명']}</span></td>
+      <td>${r['병원명']}</td><td>${r['샷수'] || '-'}</td><td>${r['도시'] || '-'}</td>
+      <td>฿${r['정가'].toLocaleString()}</td>
+      <td><strong>฿${r['할인가'].toLocaleString()}</strong></td>
+      <td><span class="badge ${bc}">${r.rate}%</span></td>
+      <td>${perShot}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderHistoryChart() {
+  const section = document.getElementById('historySection');
+  if (!historyData.length) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+
+  const dates   = historyData.map(h => h.date);
+  const allDevs = [...new Set(historyData.flatMap(h => Object.keys(h.devices)))].sort();
+
+  // 데이터 포인트가 1개면 바 차트, 2개 이상이면 라인 차트
+  const isSingle = dates.length === 1;
+
+  const note = document.getElementById('historyNote');
+  if (isSingle) {
+    note.textContent = `현재 데이터 기준: ${dates[0]} (분기별 크롤링이 쌓이면 추세선으로 전환됩니다)`;
+  } else {
+    note.textContent = `${dates[0]} ~ ${dates[dates.length-1]} | ${dates.length}개 시점 비교`;
+  }
+
+  const datasets = allDevs.map((dev, i) => ({
+    label: dev,
+    data: dates.map(d => historyData.find(h => h.date === d)?.devices[dev] ?? null),
+    borderColor: DEVICE_COLORS[i % DEVICE_COLORS.length].replace('0.75', '1'),
+    backgroundColor: DEVICE_COLORS[i % DEVICE_COLORS.length],
+    borderWidth: 2,
+    pointRadius: isSingle ? 8 : 5,
+    tension: 0.3,
+    spanGaps: true,
+  }));
+
+  mkChart('th-historyChart', {
+    type: isSingle ? 'bar' : 'line',
+    data: { labels: isSingle ? allDevs : dates, datasets: isSingle
+      ? [{
+          label: '평균 할인가 (฿)',
+          data: allDevs.map(dev => historyData[0].devices[dev] ?? 0),
+          backgroundColor: allDevs.map((_, i) => DEVICE_COLORS[i % DEVICE_COLORS.length]),
+          borderRadius: 6,
+        }]
+      : datasets
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: !isSingle },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label || ctx.label}: ฿${(ctx.raw||0).toLocaleString()}` } }
+      },
+      scales: { y: { ticks: { callback: v => '฿'+v.toLocaleString() } } }
+    }
+  });
+}
+
+loadData();
+</script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>브라질 · Ultraformer MPT 시술가</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #333; }
+
+    header { background: linear-gradient(135deg, #1b1b3a, #2d3177); color: white; padding: 28px 40px 0; }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p  { margin-top: 4px; opacity: 0.7; font-size: 0.85rem; }
+
+    .tab-nav { display: flex; gap: 4px; margin-top: 20px; }
+    .tab-btn {
+      padding: 10px 24px; border: none; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7); border-radius: 8px 8px 0 0;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.25); }
+    .tab-btn.active { background: #f0f4f8; color: #2d3177; }
+
+    .section { padding: 24px 40px; }
+
+    .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 18px 24px;
+      flex: 1; min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid var(--accent, #2e7d32);
+    }
+    .stat-card .label { font-size: 0.73rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--accent, #2e7d32); margin-top: 2px; }
+    .stat-card .sub   { font-size: 0.78rem; color: #bbb; margin-top: 1px; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .chart-card  { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    .chart-card canvas { max-height: 320px; }
+
+    .table-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-top: 18px; }
+    .table-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th { background: #f5f7fa; padding: 9px 13px; text-align: left; color: #555; font-weight: 600; border-bottom: 2px solid #e8ecf0; }
+    td { padding: 9px 13px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.73rem; font-weight: 600; }
+    .badge-eye  { background: #e8f5e9; color: #2e7d32; }
+    .badge-face { background: #e3f2fd; color: #1565c0; }
+    .badge-body { background: #f3e5f5; color: #6a1b9a; }
+
+    .empty-msg { text-align: center; padding: 60px 20px; color: #999; font-size: 0.95rem; }
+
+    @media (max-width: 860px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .section { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌏 Ultraformer MPT 3국 시술가 비교</h1>
+  <p>태국 · 중국 · 브라질 | 환율: 1 USD ≈ 33 THB ≈ 7.2 CNY ≈ 6 BRL</p>
+  <nav class="tab-nav">
+    <a class="tab-btn" href="/">🌏 통합 비교</a>
+    <a class="tab-btn" href="/china.html">🇨🇳 중국</a>
+    <a class="tab-btn" href="/thailand.html">🇹🇭 태국</a>
+    <a class="tab-btn active" href="/brazil.html">🇧🇷 브라질</a>
+  </nav>
+</header>
+
+<div class="section">
+  <div class="stats-row" id="br-stats"><div class="empty-msg">로딩 중...</div></div>
+
+  <div id="br-main" style="display:none">
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2>💰 시술 부위별 가격 (BRL) — 플랫폼 고정가</h2>
+        <canvas id="br-servicePrice"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🏷️ 시술 영역 분류별 평균가 (BRL)</h2>
+        <canvas id="br-areaChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>⏱️ 시술 시간 vs 가격</h2>
+        <canvas id="br-durationChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h2>📋 브라질 시술 카탈로그 (Trinks 플랫폼 고정가)</h2>
+      <table>
+        <thead><tr>
+          <th>시술명</th><th>영역</th><th>소요시간</th><th>가격 (R$)</th><th>USD 환산</th>
+        </tr></thead>
+        <tbody id="br-tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="table-card" style="margin-top:18px">
+      <h2>🏥 등록 클리닉 목록</h2>
+      <table>
+        <thead><tr><th>#</th><th>클리닉명</th></tr></thead>
+        <tbody id="br-clinicBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="br-empty" style="display:none" class="empty-msg">
+    데이터가 없습니다. <a href="/" style="color:#2d3177">홈</a>에서 데이터 업데이트를 실행해주세요.
+  </div>
+</div>
+
+<script>
+const BRL_TO_USD = 1/6;
+function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function round(n) { return Math.round(n); }
+
+const charts = [];
+function mkChart(id, cfg) { const c = new Chart(document.getElementById(id), cfg); charts.push(c); return c; }
+
+const areaBadge = { '눈': 'badge-eye', '얼굴': 'badge-face', '바디': 'badge-body' };
+const areaColors = { '눈': 'rgba(46,125,50,0.8)', '얼굴': 'rgba(21,101,192,0.7)', '바디': 'rgba(156,39,176,0.65)' };
+
+async function loadData() {
+  const raw = await fetch('/api/brazil').then(r => r.json());
+  const services = raw.services || [];
+  const clinics  = raw.clinics  || [];
+
+  if (!services.length) {
+    document.getElementById('br-stats').innerHTML = '';
+    document.getElementById('br-empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('br-main').style.display = 'block';
+
+  const prices = services.map(s => s.price);
+  const avgBRL = round(avg(prices));
+  const avgUSD = round(avg(prices)*BRL_TO_USD);
+
+  document.getElementById('br-stats').innerHTML = `
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">등록 클리닉</div><div class="value">${clinics.length}</div><div class="sub">개</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">시술 종류</div><div class="value">${services.length}</div><div class="sub">가지</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">평균 시술가</div><div class="value">R$${avgBRL.toLocaleString()}</div><div class="sub">BRL</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">최저가</div><div class="value">R$${Math.min(...prices).toLocaleString()}</div><div class="sub">BRL</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">최고가</div><div class="value">R$${Math.max(...prices).toLocaleString()}</div><div class="sub">BRL</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">할인율 정보</div><div class="value">N/A</div><div class="sub">고정가</div></div>`;
+
+  // 차트 1: 서비스별 가격
+  const brSorted = [...services].sort((a,b)=>a.price-b.price);
+  mkChart('br-servicePrice', {
+    type: 'bar',
+    data: { labels: brSorted.map(s => (s.service_name.split(' - ')[1] || s.service_name).substring(0,28)),
+      datasets: [{ label: '가격 (R$)', data: brSorted.map(s=>s.price),
+        backgroundColor: brSorted.map(s=>areaColors[s.area]||'rgba(46,125,50,0.5)'), borderRadius: 6 }] },
+    options: { indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { afterLabel: ctx=>'≈ $'+round(ctx.raw*BRL_TO_USD)+' USD' } } },
+      scales: { x: { ticks: { callback: v=>'R$'+v.toLocaleString() } } } }
+  });
+
+  // 차트 2: 영역별 평균
+  const areas = ['눈','얼굴','바디'];
+  mkChart('br-areaChart', {
+    type: 'bar',
+    data: { labels: areas,
+      datasets: [{ label: '영역별 평균가 (R$)',
+        data: areas.map(a=>{ const i=services.filter(s=>s.area===a).map(s=>s.price); return i.length?round(avg(i)):0; }),
+        backgroundColor: areas.map(a=>areaColors[a]), borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v=>'R$'+v.toLocaleString() } } } }
+  });
+
+  // 차트 3: 시간 vs 가격
+  mkChart('br-durationChart', {
+    type: 'scatter',
+    data: { datasets: [{ label: '시술',
+      data: services.map(s=>({ x: s.duration_min, y: s.price })),
+      backgroundColor: services.map(s=>areaColors[s.area]||'rgba(46,125,50,0.5)'),
+      pointRadius: 10 }] },
+    options: { responsive: true,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx=>{ const s=services[ctx.dataIndex]; return `${s.service_name}: R$${s.price} (${s.duration_min}분)`; } } } },
+      scales: {
+        x: { title: { display: true, text: '소요 시간 (분)' } },
+        y: { title: { display: true, text: '가격 (R$)' }, ticks: { callback: v=>'R$'+v.toLocaleString() } }
+      }}
+  });
+
+  // 서비스 테이블
+  document.getElementById('br-tableBody').innerHTML = [...services].sort((a,b)=>a.price-b.price).map(s=>`<tr>
+    <td>${s.service_name}</td>
+    <td><span class="badge ${areaBadge[s.area]||'badge-face'}">${s.area}</span></td>
+    <td>${s.duration_min}분</td>
+    <td><strong>R$${s.price.toLocaleString()}</strong></td>
+    <td>$${round(s.price*BRL_TO_USD)}</td>
+  </tr>`).join('');
+
+  // 클리닉 테이블
+  document.getElementById('br-clinicBody').innerHTML = clinics.map((c,i)=>`<tr><td>${i+1}</td><td>${c}</td></tr>`).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>

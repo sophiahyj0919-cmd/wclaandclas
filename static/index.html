@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ultraformer MPT 3국 시술가 비교</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #333; }
+
+    header { background: linear-gradient(135deg, #1b1b3a, #2d3177); color: white; padding: 28px 40px 0; }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p  { margin-top: 4px; opacity: 0.7; font-size: 0.85rem; }
+
+    .tab-nav { display: flex; gap: 4px; margin-top: 20px; }
+    .tab-btn {
+      padding: 10px 24px; border: none; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7); border-radius: 8px 8px 0 0;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.25); }
+    .tab-btn.active { background: #f0f4f8; color: #2d3177; }
+
+    .section { padding: 24px 40px; }
+
+    .crawl-bar {
+      display: flex; align-items: center; gap: 14px;
+      background: white; margin: 20px 40px 0;
+      border-radius: 12px; padding: 14px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .crawl-btn {
+      padding: 9px 22px; background: #2d3177; color: white;
+      border: none; border-radius: 8px; font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    .crawl-btn:hover:not(:disabled) { background: #1b1b3a; }
+    .crawl-btn:disabled { background: #aaa; cursor: not-allowed; }
+    .crawl-msg { font-size: 0.85rem; color: #666; }
+    .crawl-last { font-size: 0.78rem; color: #aaa; margin-left: auto; }
+
+    .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 18px 24px;
+      flex: 1; min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid var(--accent, #2d3177);
+    }
+    .stat-card .label { font-size: 0.73rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--accent, #2d3177); margin-top: 2px; }
+    .stat-card .sub   { font-size: 0.78rem; color: #bbb; margin-top: 1px; }
+
+    .country-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .country-box  { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .country-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .chart-card  { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    .chart-card canvas { max-height: 300px; }
+
+    .note-box {
+      background: #fffde7; border-left: 4px solid #f9a825;
+      border-radius: 8px; padding: 12px 16px; margin-top: 14px;
+      font-size: 0.82rem; color: #5d4037; line-height: 1.6;
+    }
+
+    .country-link-row {
+      display: flex; gap: 12px; margin-bottom: 20px;
+    }
+    .country-link {
+      flex: 1; padding: 18px; background: white; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      text-decoration: none; color: #333; text-align: center;
+      border-top: 4px solid #ccc; transition: transform 0.15s, box-shadow 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .country-link:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+    .country-link .flag { font-size: 2rem; }
+    .country-link .name { font-size: 1rem; font-weight: 700; }
+    .country-link .sub  { font-size: 0.78rem; color: #999; }
+
+    .empty-msg { text-align: center; padding: 60px 20px; color: #999; font-size: 0.95rem; }
+
+    @media (max-width: 860px) {
+      .charts-grid, .country-cols { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .section { padding: 16px; }
+      .crawl-bar { margin: 12px 16px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌏 Ultraformer MPT 3국 시술가 비교</h1>
+  <p>태국 · 중국 · 브라질 | 환율: 1 USD ≈ 33 THB ≈ 7.2 CNY ≈ 6 BRL</p>
+  <nav class="tab-nav">
+    <a class="tab-btn active" href="/">🌏 통합 비교</a>
+    <a class="tab-btn" href="/china.html">🇨🇳 중국</a>
+    <a class="tab-btn" href="/thailand.html">🇹🇭 태국</a>
+    <a class="tab-btn" href="/brazil.html">🇧🇷 브라질</a>
+  </nav>
+</header>
+
+<!-- 크롤링 바 -->
+<div class="crawl-bar">
+  <button class="crawl-btn" id="crawlBtn" onclick="startCrawl()">🔄 데이터 업데이트</button>
+  <span class="crawl-msg" id="crawlMsg"></span>
+  <span class="crawl-last" id="crawlLast"></span>
+</div>
+
+<div class="section">
+  <!-- 나라별 상세 링크 -->
+  <div class="country-link-row">
+    <a class="country-link" href="/china.html"    style="border-color:#c62828;">
+      <span class="flag">🇨🇳</span><span class="name">중국 상세</span><span class="sub">소영 플랫폼 데이터</span>
+    </a>
+    <a class="country-link" href="/thailand.html" style="border-color:#1565c0;">
+      <span class="flag">🇹🇭</span><span class="name">태국 상세</span><span class="sub">GoWabi 플랫폼 데이터</span>
+    </a>
+    <a class="country-link" href="/brazil.html"   style="border-color:#2e7d32;">
+      <span class="flag">🇧🇷</span><span class="name">브라질 상세</span><span class="sub">Trinks 플랫폼 데이터</span>
+    </a>
+  </div>
+
+  <!-- 국가별 요약 카드 -->
+  <div class="country-cols">
+    <div class="country-box" style="border-top: 4px solid #c62828;">
+      <h3>🇨🇳 중국 (China)</h3>
+      <div class="stats-row" id="ov-cn-stats"><div class="empty-msg">로딩 중...</div></div>
+    </div>
+    <div class="country-box" style="border-top: 4px solid #1565c0;">
+      <h3>🇹🇭 태국 (Thailand)</h3>
+      <div class="stats-row" id="ov-th-stats"><div class="empty-msg">로딩 중...</div></div>
+    </div>
+    <div class="country-box" style="border-top: 4px solid #2e7d32;">
+      <h3>🇧🇷 브라질 (Brazil)</h3>
+      <div class="stats-row" id="ov-br-stats"><div class="empty-msg">로딩 중...</div></div>
+    </div>
+  </div>
+
+  <!-- 차트 -->
+  <div class="charts-grid">
+    <div class="chart-card full">
+      <h2>💱 얼굴 시술 평균가 3국 비교 (USD 환산)</h2>
+      <canvas id="ov-compareChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>📉 국가별 평균 할인율 비교</h2>
+      <canvas id="ov-discountChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>📊 태국 샷수별 평균 할인가 (THB)</h2>
+      <canvas id="ov-thChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>📊 중국 병원별 온라인가 (CNY, 상위 10)</h2>
+      <canvas id="ov-cnChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <h2>📊 브라질 시술 부위별 가격 (BRL)</h2>
+      <canvas id="ov-brChart"></canvas>
+    </div>
+  </div>
+
+  <div class="note-box">
+    ⚠️ <strong>데이터 특성 차이:</strong>
+    🇨🇳 중국(소영)은 <strong>병원별 면부 패키지 온라인 가격</strong>, 할인율은 정가 대비.
+    🇹🇭 태국은 <strong>샷수 기반 패키지 + 다양한 할인율</strong> 적용 클리닉별 가격.
+    🇧🇷 브라질은 <strong>Trinks 플랫폼 공통 고정가</strong> (할인가 정보 없음).
+    USD 환산: 1 USD ≈ 7.2 CNY ≈ 33 THB ≈ 6 BRL
+  </div>
+</div>
+
+<script>
+const THB = 1/33, CNY = 1/7.2, BRL = 1/6;
+function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function round(n) { return Math.round(n); }
+
+const charts = [];
+function mkChart(id, cfg) {
+  const c = new Chart(document.getElementById(id), cfg);
+  charts.push(c);
+  return c;
+}
+
+/* ── 크롤 버튼 ─────────────────────────────── */
+let pollTimer = null;
+
+async function startCrawl() {
+  const btn = document.getElementById('crawlBtn');
+  btn.disabled = true;
+  document.getElementById('crawlMsg').textContent = '크롤링 요청 중...';
+  await fetch('/api/crawl', { method: 'POST' });
+  pollStatus();
+}
+
+async function pollStatus() {
+  const res  = await fetch('/api/crawl/status');
+  const data = await res.json();
+  const btn  = document.getElementById('crawlBtn');
+  const msg  = document.getElementById('crawlMsg');
+  const last = document.getElementById('crawlLast');
+
+  msg.textContent = data.message;
+  if (data.last_run) last.textContent = '마지막 업데이트: ' + data.last_run;
+
+  if (data.running) {
+    pollTimer = setTimeout(pollStatus, 3000);
+  } else {
+    btn.disabled = false;
+    if (data.message === '완료') {
+      charts.forEach(c => c.destroy());
+      charts.length = 0;
+      loadAll();
+    }
+  }
+}
+
+// 페이지 로드 시 상태 확인
+(async () => {
+  const res  = await fetch('/api/crawl/status');
+  const data = await res.json();
+  if (data.last_run) document.getElementById('crawlLast').textContent = '마지막 업데이트: ' + data.last_run;
+  if (data.running) {
+    document.getElementById('crawlBtn').disabled = true;
+    document.getElementById('crawlMsg').textContent = data.message;
+    pollStatus();
+  }
+})();
+
+/* ── 데이터 로드 & 렌더 ─────────────────────── */
+async function loadAll() {
+  const [thResp, cn, brRaw] = await Promise.all([
+    fetch('/api/thailand').then(r => r.json()),
+    fetch('/api/china').then(r => r.json()),
+    fetch('/api/brazil').then(r => r.json()),
+  ]);
+  const th = thResp.rows || [];
+  const br = brRaw.services || [];
+
+  renderCnStats(cn);
+  renderThStats(th);
+  renderBrStats(br, brRaw.clinics || []);
+  renderCharts(th, cn, br);
+}
+
+function renderCnStats(cn) {
+  if (!cn.length) { document.getElementById('ov-cn-stats').innerHTML = '<div class="empty-msg">데이터 없음</div>'; return; }
+  const prices   = cn.map(d => d.price_online);
+  const discRates= cn.map(d => round((1 - d.price_online/d.price_original)*100));
+  const clinics  = new Set(cn.map(d => d.hospital)).size;
+  const avgUSD   = round(avg(prices)*CNY);
+  const minUSD   = round(Math.min(...prices)*CNY);
+  const maxUSD   = round(Math.max(...prices)*CNY);
+  const avgDisc  = round(avg(discRates));
+  document.getElementById('ov-cn-stats').innerHTML = `
+    <div class="stat-card" style="--accent:#c62828"><div class="label">등록 병원</div><div class="value">${clinics}</div><div class="sub">개</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">평균 온라인가</div><div class="value">$${avgUSD}</div><div class="sub">USD 환산</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">평균 할인율</div><div class="value">${avgDisc}%</div><div class="sub">할인</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">가격 범위</div><div class="value">$${minUSD}~</div><div class="sub">$${maxUSD} USD</div></div>`;
+}
+
+function renderThStats(th) {
+  if (!th.length) { document.getElementById('ov-th-stats').innerHTML = '<div class="empty-msg">데이터 없음</div>'; return; }
+  const valid    = th.filter(d => d['할인가'] > 0 && d['정가'] > 0);
+  const prices   = valid.map(d => d['할인가']);
+  const discRates= valid.map(d => round((1 - d['할인가']/d['정가'])*100));
+  const clinics  = new Set(valid.map(d => d['병원명'])).size;
+  const avgUSD   = round(avg(prices)*THB);
+  const minUSD   = round(Math.min(...prices)*THB);
+  const maxUSD   = round(Math.max(...prices)*THB);
+  const avgDisc  = round(avg(discRates));
+  document.getElementById('ov-th-stats').innerHTML = `
+    <div class="stat-card" style="--accent:#1565c0"><div class="label">등록 클리닉</div><div class="value">${clinics}</div><div class="sub">개</div></div>
+    <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인가</div><div class="value">$${avgUSD}</div><div class="sub">USD 환산</div></div>
+    <div class="stat-card" style="--accent:#1565c0"><div class="label">평균 할인율</div><div class="value">${avgDisc}%</div><div class="sub">할인</div></div>
+    <div class="stat-card" style="--accent:#1565c0"><div class="label">가격 범위</div><div class="value">$${minUSD}~</div><div class="sub">$${maxUSD} USD</div></div>`;
+}
+
+function renderBrStats(br, clinics) {
+  if (!br.length) { document.getElementById('ov-br-stats').innerHTML = '<div class="empty-msg">데이터 없음</div>'; return; }
+  const prices = br.map(s => s.price);
+  const avgUSD = round(avg(prices)*BRL);
+  const minUSD = round(Math.min(...prices)*BRL);
+  const maxUSD = round(Math.max(...prices)*BRL);
+  document.getElementById('ov-br-stats').innerHTML = `
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">등록 클리닉</div><div class="value">${clinics.length}</div><div class="sub">개</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">평균 시술가</div><div class="value">$${avgUSD}</div><div class="sub">USD 환산</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">할인가 정보</div><div class="value">없음</div><div class="sub">고정 플랫폼가</div></div>
+    <div class="stat-card" style="--accent:#2e7d32"><div class="label">가격 범위</div><div class="value">$${minUSD}~</div><div class="sub">$${maxUSD} USD</div></div>`;
+}
+
+function renderCharts(th, cn, br) {
+  const thValid = th.filter(d => d['할인가'] > 0);
+
+  const cnFaceAvg = round(avg(cn.filter(d=>d.area_cn==='面部').map(d=>d.price_online))*CNY);
+  const cnNeckAvg = round(avg(cn.filter(d=>d.area_cn==='面部+颈部').map(d=>d.price_online))*CNY) || cnFaceAvg;
+  const thFaceAvg = round(avg(thValid.filter(d=>[300,400].includes(d['샷수'])).map(d=>d['할인가']))*THB);
+  const thNeckAvg = round(avg(thValid.filter(d=>[600,800].includes(d['샷수'])).map(d=>d['할인가']))*THB);
+  const brFaceAvg = round(avg(br.filter(s=>s.area==='얼굴').map(s=>s.price))*BRL);
+  const brBodyAvg = round(avg(br.filter(s=>s.area==='바디').map(s=>s.price))*BRL);
+  const cnDiscRates = cn.map(d => round((1-d.price_online/d.price_original)*100));
+  const thDiscRates = thValid.map(d => round((1-d['할인가']/d['정가'])*100));
+  const cnAvgDisc = round(avg(cnDiscRates));
+  const thAvgDisc = round(avg(thDiscRates));
+
+  mkChart('ov-compareChart', {
+    type: 'bar',
+    data: {
+      labels: ['얼굴 기본 시술', '얼굴+목 / 대형'],
+      datasets: [
+        { label: '🇨🇳 중국', data: [cnFaceAvg, cnNeckAvg], backgroundColor: 'rgba(198,40,40,0.75)', borderRadius: 6 },
+        { label: '🇹🇭 태국', data: [thFaceAvg, thNeckAvg], backgroundColor: 'rgba(21,101,192,0.75)', borderRadius: 6 },
+        { label: '🇧🇷 브라질', data: [brFaceAvg, brBodyAvg], backgroundColor: 'rgba(46,125,50,0.75)', borderRadius: 6 },
+      ]
+    },
+    options: { responsive: true, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.raw}` } } },
+      scales: { y: { title: { display: true, text: 'USD' }, ticks: { callback: v => '$'+v.toLocaleString() } } } }
+  });
+
+  mkChart('ov-discountChart', {
+    type: 'bar',
+    data: {
+      labels: ['🇨🇳 중국', '🇹🇭 태국', '🇧🇷 브라질'],
+      datasets: [{ label: '평균 할인율 (%)', data: [cnAvgDisc, thAvgDisc, 0],
+        backgroundColor: ['rgba(198,40,40,0.75)','rgba(21,101,192,0.75)','rgba(46,125,50,0.4)'], borderRadius: 8 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ctx.raw === 0 ? '할인 정보 없음' : ctx.raw + '%' } } },
+      scales: { y: { max: 80, ticks: { callback: v => v+'%' } } } }
+  });
+
+  // 태국 샷수별 미니 차트
+  const shotKeys = [100,200,300,400,500,600,800];
+  mkChart('ov-thChart', {
+    type: 'bar',
+    data: { labels: shotKeys.map(s=>s+' shots'),
+      datasets: [{ label: '평균 할인가 (฿)',
+        data: shotKeys.map(s => { const i=thValid.filter(d=>d['샷수']===s).map(d=>d['할인가']); return i.length ? round(avg(i)) : 0; }),
+        backgroundColor: 'rgba(21,101,192,0.7)', borderRadius: 5 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v=>'฿'+v.toLocaleString() } } } }
+  });
+
+  // 중국 병원 미니 차트
+  const cnTop10 = [...cn].sort((a,b)=>b.price_online-a.price_online).slice(0,10);
+  mkChart('ov-cnChart', {
+    type: 'bar',
+    data: { labels: cnTop10.map(d=>d.hospital.replace(/医疗美容医院|医学美容医院|整形外科医院/g,'').substring(0,12)),
+      datasets: [{ label: '온라인가 (¥)', data: cnTop10.map(d=>d.price_online), backgroundColor: 'rgba(198,40,40,0.7)', borderRadius: 5 }] },
+    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v=>'¥'+v.toLocaleString() } } } }
+  });
+
+  // 브라질 미니 차트
+  const brSorted = [...br].sort((a,b)=>a.price-b.price);
+  mkChart('ov-brChart', {
+    type: 'bar',
+    data: { labels: brSorted.map(s=>s.service_name.split(' - ')[1] || s.service_name).map(s=>s.substring(0,16)),
+      datasets: [{ label: '가격 (R$)', data: brSorted.map(s=>s.price),
+        backgroundColor: brSorted.map(s=>s.area==='눈'?'rgba(46,125,50,0.8)':s.area==='얼굴'?'rgba(46,125,50,0.55)':'rgba(46,125,50,0.3)'),
+        borderRadius: 5 }] },
+    options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { ticks: { callback: v=>'R$'+v.toLocaleString() } } } }
+  });
+}
+
+loadAll();
+</script>
+</body>
+</html>

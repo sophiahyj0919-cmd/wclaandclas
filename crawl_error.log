@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "C:\Users\user\Desktop\miniproject\workplace\server.py", line 192, in _run_crawlers
+    mod.main()
+    ~~~~~~~~^^
+  File "C:\Users\user\Desktop\miniproject\workplace\thailand_gowabi.py", line 365, in main
+    print(f"🚀 [{cfg['name']}] 크롤링 시작")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'cp949' codec can't encode character '\U0001f680' in position 0: illegal multibyte sequence

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>중국 · Ultraformer MPT 시술가</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #333; }
+
+    header { background: linear-gradient(135deg, #1b1b3a, #2d3177); color: white; padding: 28px 40px 0; }
+    header h1 { font-size: 1.7rem; font-weight: 700; }
+    header p  { margin-top: 4px; opacity: 0.7; font-size: 0.85rem; }
+
+    .tab-nav { display: flex; gap: 4px; margin-top: 20px; }
+    .tab-btn {
+      padding: 10px 24px; border: none; background: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7); border-radius: 8px 8px 0 0;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; transition: all 0.2s;
+    }
+    .tab-btn:hover { background: rgba(255,255,255,0.25); }
+    .tab-btn.active { background: #f0f4f8; color: #2d3177; }
+
+    .section { padding: 24px 40px; }
+
+    .stats-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 18px 24px;
+      flex: 1; min-width: 140px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      border-top: 3px solid var(--accent, #c62828);
+    }
+    .stat-card .label { font-size: 0.73rem; color: #999; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-card .value { font-size: 1.7rem; font-weight: 700; color: var(--accent, #c62828); margin-top: 2px; }
+    .stat-card .sub   { font-size: 0.78rem; color: #bbb; margin-top: 1px; }
+
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .chart-card  { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    .chart-card canvas { max-height: 340px; }
+
+    .table-card { background: white; border-radius: 12px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-top: 18px; }
+    .table-card h2 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+    th { background: #f5f7fa; padding: 9px 13px; text-align: left; color: #555; font-weight: 600; border-bottom: 2px solid #e8ecf0; }
+    td { padding: 9px 13px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafbff; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.73rem; font-weight: 600; }
+    .badge-high { background: #e8f5e9; color: #2e7d32; }
+    .badge-mid  { background: #fff8e1; color: #f57f17; }
+    .badge-low  { background: #fce4ec; color: #c62828; }
+    .badge-face { background: #e3f2fd; color: #1565c0; }
+
+    .empty-msg { text-align: center; padding: 60px 20px; color: #999; font-size: 0.95rem; }
+
+    @media (max-width: 860px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card.full { grid-column: 1; }
+      .section { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🌏 Ultraformer MPT 3국 시술가 비교</h1>
+  <p>태국 · 중국 · 브라질 | 환율: 1 USD ≈ 33 THB ≈ 7.2 CNY ≈ 6 BRL</p>
+  <nav class="tab-nav">
+    <a class="tab-btn" href="/">🌏 통합 비교</a>
+    <a class="tab-btn active" href="/china.html">🇨🇳 중국</a>
+    <a class="tab-btn" href="/thailand.html">🇹🇭 태국</a>
+    <a class="tab-btn" href="/brazil.html">🇧🇷 브라질</a>
+  </nav>
+</header>
+
+<div class="section">
+  <div class="stats-row" id="cn-stats"><div class="empty-msg">로딩 중...</div></div>
+
+  <div id="cn-main" style="display:none">
+    <div class="charts-grid">
+      <div class="chart-card full">
+        <h2>🏥 병원별 온라인 가격 (CNY) — 할인율 내림차순</h2>
+        <canvas id="cn-hospitalChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>💸 정가 vs 온라인가 비교</h2>
+        <canvas id="cn-compareChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <h2>🗂️ 시술 부위별 건수 및 평균가</h2>
+        <canvas id="cn-areaChart"></canvas>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h2>📋 전체 데이터 (할인율 내림차순)</h2>
+      <table>
+        <thead><tr>
+          <th>병원명</th><th>시술 부위</th>
+          <th>정가 (¥)</th><th>온라인가 (¥)</th><th>할인율</th><th>USD 환산</th>
+        </tr></thead>
+        <tbody id="cn-tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="cn-empty" style="display:none" class="empty-msg">
+    데이터가 없습니다. <a href="/" style="color:#2d3177">홈</a>에서 데이터 업데이트를 실행해주세요.
+  </div>
+</div>
+
+<script>
+const CNY_TO_USD = 1/7.2;
+function avg(a) { return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0; }
+function round(n) { return Math.round(n); }
+
+const charts = [];
+function mkChart(id, cfg) { const c = new Chart(document.getElementById(id), cfg); charts.push(c); return c; }
+
+async function loadData() {
+  const data = await fetch('/api/china').then(r => r.json());
+
+  if (!data.length) {
+    document.getElementById('cn-stats').innerHTML = '';
+    document.getElementById('cn-empty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('cn-main').style.display = 'block';
+
+  const prices    = data.map(d => d.price_online);
+  const discRates = data.map(d => round((1 - d.price_online/d.price_original)*100));
+  const clinics   = new Set(data.map(d => d.hospital)).size;
+  const avgPrice  = round(avg(prices));
+  const avgUSD    = round(avg(prices)*CNY_TO_USD);
+  const avgDisc   = round(avg(discRates));
+
+  document.getElementById('cn-stats').innerHTML = `
+    <div class="stat-card" style="--accent:#c62828"><div class="label">총 시술 건수</div><div class="value">${data.length}</div><div class="sub">건</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">등록 병원 수</div><div class="value">${clinics}</div><div class="sub">개</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">평균 온라인가</div><div class="value">¥${avgPrice.toLocaleString()}</div><div class="sub">CNY</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">최저가</div><div class="value">¥${Math.min(...prices).toLocaleString()}</div><div class="sub">CNY</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">최고가</div><div class="value">¥${Math.max(...prices).toLocaleString()}</div><div class="sub">CNY</div></div>
+    <div class="stat-card" style="--accent:#c62828"><div class="label">평균 할인율</div><div class="value">${avgDisc}%</div><div class="sub">할인</div></div>`;
+
+  // 차트 1: 병원별 (할인율 내림차순)
+  const sorted = [...data].map(d => ({
+    name: d.hospital.replace(/[医疗美容医院|医学美容医院|整形外科医院|整形美容医院]/g,'').substring(0,14),
+    online: d.price_online, original: d.price_original,
+    rate: round((1-d.price_online/d.price_original)*100)
+  })).sort((a,b)=>b.rate-a.rate);
+
+  mkChart('cn-hospitalChart', {
+    type: 'bar',
+    data: { labels: sorted.map(d=>d.name),
+      datasets: [{ label: '온라인가 (¥)', data: sorted.map(d=>d.online),
+        backgroundColor: sorted.map(d=>d.rate>=40?'rgba(198,40,40,0.85)':d.rate>=20?'rgba(198,40,40,0.6)':'rgba(198,40,40,0.35)'),
+        borderRadius: 5 }] },
+    options: { indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { afterLabel: ctx => `할인율: ${sorted[ctx.dataIndex].rate}% | ¥${sorted[ctx.dataIndex].original.toLocaleString()} → ¥${sorted[ctx.dataIndex].online.toLocaleString()}` } } },
+      scales: { x: { ticks: { callback: v=>'¥'+v.toLocaleString() } } } }
+  });
+
+  // 차트 2: 정가 vs 온라인가
+  const sortedPrice = [...data].sort((a,b)=>a.price_online-b.price_online);
+  mkChart('cn-compareChart', {
+    type: 'bar',
+    data: { labels: sortedPrice.map(d=>d.hospital.substring(0,10)),
+      datasets: [
+        { label: '정가 (¥)', data: sortedPrice.map(d=>d.price_original), backgroundColor: 'rgba(239,83,80,0.4)', borderRadius: 3 },
+        { label: '온라인가 (¥)', data: sortedPrice.map(d=>d.price_online), backgroundColor: 'rgba(198,40,40,0.75)', borderRadius: 3 },
+      ] },
+    options: { responsive: true, scales: {
+      x: { ticks: { font: { size: 10 }, maxRotation: 45 } },
+      y: { ticks: { callback: v=>'¥'+v.toLocaleString() } }
+    }}
+  });
+
+  // 차트 3: 부위별
+  const areaMap = {};
+  data.forEach(d => {
+    const k = d.area_kr;
+    if (!areaMap[k]) areaMap[k] = { count: 0, prices: [] };
+    areaMap[k].count++;
+    areaMap[k].prices.push(d.price_online);
+  });
+  const cnAreas = Object.entries(areaMap).sort((a,b)=>b[1].count-a[1].count);
+
+  mkChart('cn-areaChart', {
+    type: 'bar',
+    data: { labels: cnAreas.map(([k])=>k),
+      datasets: [
+        { label: '건수', data: cnAreas.map(([,v])=>v.count), backgroundColor: 'rgba(198,40,40,0.7)', yAxisID: 'y', borderRadius: 4 },
+        { label: '평균 온라인가 (¥)', data: cnAreas.map(([,v])=>round(avg(v.prices))),
+          backgroundColor: 'rgba(198,40,40,0.25)', yAxisID: 'y2', type: 'line',
+          fill: false, pointRadius: 6, borderColor: 'rgba(198,40,40,0.8)' }
+      ] },
+    options: { responsive: true, scales: {
+      y:  { title: { display: true, text: '건수' }, position: 'left' },
+      y2: { title: { display: true, text: '평균가 (¥)' }, position: 'right', grid: { drawOnChartArea: false },
+            ticks: { callback: v=>'¥'+v.toLocaleString() } }
+    }}
+  });
+
+  // 테이블
+  const tableData = [...data].map(d => ({...d, rate: round((1-d.price_online/d.price_original)*100)}))
+    .sort((a,b)=>b.rate-a.rate);
+  document.getElementById('cn-tableBody').innerHTML = tableData.map(r => {
+    const bc = r.rate>=40?'badge-high':r.rate>=20?'badge-mid':'badge-low';
+    return `<tr>
+      <td>${r.hospital}</td>
+      <td><span class="badge badge-face">${r.area_kr}</span></td>
+      <td>¥${r.price_original.toLocaleString()}</td>
+      <td><strong>¥${r.price_online.toLocaleString()}</strong></td>
+      <td><span class="badge ${bc}">${r.rate}%</span></td>
+      <td>$${round(r.price_online*CNY_TO_USD)}</td>
+    </tr>`;
+  }).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>
